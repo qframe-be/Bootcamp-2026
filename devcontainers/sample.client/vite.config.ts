@@ -48,6 +48,9 @@ export default defineConfig({
         }
     },
     server: {
+        // Bind IPv4 explicitly: in the dev container 'localhost' resolves to ::1 only,
+        // which VS Code's port forwarder (connecting to 127.0.0.1) can't reach.
+        host: '127.0.0.1',
         proxy: {
             '^/weatherforecast': {
                 target,
