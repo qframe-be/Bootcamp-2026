@@ -10,16 +10,15 @@ builder.Services.AddControllers();
 // The connection string comes from configuration ("ConnectionStrings:SampleDb" in appsettings),
 // and can be overridden with the environment variable ConnectionStrings__SampleDb.
 builder.Services.AddDbContext<SampleDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("SampleDb"),
-        sql => sql.EnableRetryOnFailure()));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("SampleDb")));
+
+// Creates and seeds the database in the background, retrying until it is reachable.
+builder.Services.AddHostedService<DatabaseInitializer>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
-
-await DatabaseInitializer.InitializeAsync(app.Services);
 
 app.UseDefaultFiles();
 app.MapStaticAssets();

@@ -18,6 +18,8 @@ interface DatabaseInfo {
 function App() {
     const [forecasts, setForecasts] = useState<Forecast[]>();
     const [database, setDatabase] = useState<DatabaseInfo>();
+    const [error, setError] = useState<string>();
+    const [adding, setAdding] = useState(false);
 
     useEffect(() => {
         populateWeatherData();
@@ -36,6 +38,10 @@ function App() {
                 </tr>
             </thead>
             <tbody>
+                {forecasts.length === 0 &&
+                    <tr>
+                        <td colSpan={4}><em>No forecasts available</em></td>
+                    </tr>}
                 {forecasts.map(forecast =>
                     <tr key={forecast.id}>
                         <td>{forecast.date}</td>
@@ -51,9 +57,12 @@ function App() {
         <div>
             <h1 id="tableLabel">Weather forecast</h1>
             <p>This component demonstrates fetching data from the server, which stores it in SQL Server.</p>
+            {error && <p className="error" role="alert">{error}</p>}
             {contents}
             <p>
-                <button onClick={addForecast} disabled={forecasts === undefined}>Add a forecast</button>
+                <button onClick={addForecast} disabled={forecasts === undefined || adding}>
+                    {adding ? 'Adding...' : 'Add a forecast'}
+                </button>
             </p>
             {database &&
                 <p className="database-info">
@@ -67,24 +76,46 @@ function App() {
     async function populateWeatherData() {
         const response = await fetch('weatherforecast');
         if (response.ok) {
-            const data = await response.json();
-            setForecasts(data);
+            setForecasts(await response.json());
+            setError(undefined);
+        } else if (response.status === 503) {
+            // The backend is running but can't reach the database: show an empty table and the reason.
+            setForecasts([]);
+            setError(await describeError(response));
         }
     }
 
     async function populateDatabaseInfo() {
         const response = await fetch('database');
         if (response.ok) {
-            const data = await response.json();
-            setDatabase(data);
+            setDatabase(await response.json());
         }
     }
 
     async function addForecast() {
-        const response = await fetch('weatherforecast', { method: 'POST' });
-        if (response.ok) {
-            await populateWeatherData();
+        setAdding(true);
+        setError(undefined);
+        try {
+            const response = await fetch('weatherforecast', { method: 'POST' });
+            if (response.ok) {
+                await populateWeatherData();
+                await populateDatabaseInfo();
+            } else {
+                setError(`Could not add a forecast. ${await describeError(response)}`);
+            }
+        } finally {
+            setAdding(false);
         }
+    }
+}
+
+// Turns an error response (ProblemDetails from ASP.NET Core) into a readable message.
+async function describeError(response: Response) {
+    try {
+        const problem = await response.json();
+        return `${problem.title ?? response.statusText}: ${problem.detail ?? ''}`;
+    } catch {
+        return `${response.status} ${response.statusText}`;
     }
 }
 

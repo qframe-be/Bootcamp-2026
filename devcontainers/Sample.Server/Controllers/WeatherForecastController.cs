@@ -6,29 +6,49 @@ namespace Sample.Server.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class WeatherForecastController(SampleDbContext db) : ControllerBase
+public class WeatherForecastController(SampleDbContext db, ILogger<WeatherForecastController> logger) : ControllerBase
 {
     [HttpGet(Name = "GetWeatherForecast")]
-    public async Task<IEnumerable<WeatherForecast>> Get()
+    public async Task<ActionResult<IEnumerable<WeatherForecast>>> Get()
     {
-        return await db.Forecasts
-            .OrderBy(f => f.Date)
-            .ThenBy(f => f.Id)
-            .ToListAsync();
+        try
+        {
+            return await db.Forecasts
+                .OrderBy(f => f.Date)
+                .ThenBy(f => f.Id)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            return DatabaseUnavailable(ex);
+        }
     }
 
     // Adds a random forecast for the day after the last one, so you can see data being written
     // and check whether it survives restarting the containers.
     [HttpPost(Name = "AddWeatherForecast")]
-    public async Task<WeatherForecast> Post()
+    public async Task<ActionResult<WeatherForecast>> Post()
     {
-        var lastDate = await db.Forecasts.MaxAsync(f => (DateOnly?)f.Date)
-            ?? DateOnly.FromDateTime(DateTime.Now);
+        try
+        {
+            var lastDate = await db.Forecasts.MaxAsync(f => (DateOnly?)f.Date)
+                ?? DateOnly.FromDateTime(DateTime.Now);
 
-        var forecast = DatabaseInitializer.CreateRandomForecast(lastDate.AddDays(1));
-        db.Forecasts.Add(forecast);
-        await db.SaveChangesAsync();
+            var forecast = DatabaseInitializer.CreateRandomForecast(lastDate.AddDays(1));
+            db.Forecasts.Add(forecast);
+            await db.SaveChangesAsync();
 
-        return forecast;
+            return forecast;
+        }
+        catch (Exception ex)
+        {
+            return DatabaseUnavailable(ex);
+        }
+    }
+
+    private ObjectResult DatabaseUnavailable(Exception ex)
+    {
+        logger.LogError(ex, "Could not reach the database");
+        return Problem(title: "Database not available", detail: DatabaseErrors.Describe(ex), statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 }
