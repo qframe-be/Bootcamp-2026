@@ -1,12 +1,25 @@
+using Microsoft.EntityFrameworkCore;
+using Sample.Server.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+// The connection string comes from configuration ("ConnectionStrings:SampleDb" in appsettings),
+// and can be overridden with the environment variable ConnectionStrings__SampleDb.
+builder.Services.AddDbContext<SampleDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("SampleDb"),
+        sql => sql.EnableRetryOnFailure()));
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+await DatabaseInitializer.InitializeAsync(app.Services);
 
 app.UseDefaultFiles();
 app.MapStaticAssets();

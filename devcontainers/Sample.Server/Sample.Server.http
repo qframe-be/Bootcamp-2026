@@ -4,3 +4,13 @@ GET {{Sample.Server_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+POST {{Sample.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+GET {{Sample.Server_HostAddress}}/database/
+Accept: application/json
+
+###

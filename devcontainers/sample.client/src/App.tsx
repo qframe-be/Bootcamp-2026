@@ -2,17 +2,26 @@ import { useEffect, useState } from 'react';
 import './App.css';
 
 interface Forecast {
+    id: number;
     date: string;
     temperatureC: number;
     temperatureF: number;
     summary: string;
 }
 
+interface DatabaseInfo {
+    server: string;
+    database: string;
+    version: string;
+}
+
 function App() {
     const [forecasts, setForecasts] = useState<Forecast[]>();
+    const [database, setDatabase] = useState<DatabaseInfo>();
 
     useEffect(() => {
         populateWeatherData();
+        populateDatabaseInfo();
     }, []);
 
     const contents = forecasts === undefined
@@ -28,7 +37,7 @@ function App() {
             </thead>
             <tbody>
                 {forecasts.map(forecast =>
-                    <tr key={forecast.date}>
+                    <tr key={forecast.id}>
                         <td>{forecast.date}</td>
                         <td>{forecast.temperatureC}</td>
                         <td>{forecast.temperatureF}</td>
@@ -41,8 +50,17 @@ function App() {
     return (
         <div>
             <h1 id="tableLabel">Weather forecast</h1>
-            <p>This component demonstrates fetching data from the server.</p>
+            <p>This component demonstrates fetching data from the server, which stores it in SQL Server.</p>
             {contents}
+            <p>
+                <button onClick={addForecast} disabled={forecasts === undefined}>Add a forecast</button>
+            </p>
+            {database &&
+                <p className="database-info">
+                    Database <strong>{database.database}</strong> on server <strong>{database.server}</strong>
+                    <br />
+                    <small>{database.version}</small>
+                </p>}
         </div>
     );
 
@@ -51,6 +69,21 @@ function App() {
         if (response.ok) {
             const data = await response.json();
             setForecasts(data);
+        }
+    }
+
+    async function populateDatabaseInfo() {
+        const response = await fetch('database');
+        if (response.ok) {
+            const data = await response.json();
+            setDatabase(data);
+        }
+    }
+
+    async function addForecast() {
+        const response = await fetch('weatherforecast', { method: 'POST' });
+        if (response.ok) {
+            await populateWeatherData();
         }
     }
 }

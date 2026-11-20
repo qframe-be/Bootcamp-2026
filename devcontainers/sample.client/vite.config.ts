@@ -52,7 +52,7 @@ export default defineConfig({
         // which VS Code's port forwarder (connecting to 127.0.0.1) can't reach.
         host: '127.0.0.1',
         proxy: {
-            '^/weatherforecast': {
+            '^/(weatherforecast|database)': {
                 target,
                 secure: false
             }
